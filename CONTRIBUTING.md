@@ -4,44 +4,108 @@ Thanks for interest in contributing! Here's how to get started.
 
 ## Local LLM Support
 
-This project now supports multiple local LLM backends:
+This project supports multiple local LLM backends for privacy-first AI interactions.
 
 ### Supported Local LLMs
 
-- **Ollama** - Easiest to use, pre-quantized models
-  ```bash
-  brew install ollama
-  ollama serve
-  ```
+#### Ollama (Recommended for beginners)
 
-- **vLLM** - High-performance inference server
-  ```bash
-  python3 -m venv ~/.venv
-  source ~/.venv/bin/activate
-  pip install vllm
-  python -m vllm.entrypoints.openai.api_server
-  ```
+Easiest to use with pre-quantized models:
 
-- **Llama.cpp** - Lightweight C++ implementation
-  ```bash
-  brew install llama.cpp
-  llama-cli -m <path-to-model.gguf> -i
-  ```
+```bash
+brew install ollama
+ollama serve
+```
 
-### Adding a New Local LLM
+In another terminal:
+```bash
+ollama run llama2
+```
 
-1. Add a new case to `AgentProvider` enum in `AgentSession.swift`:
+#### vLLM (High-performance inference)
+
+For faster inference with HuggingFace models:
+
+```bash
+python3 -m venv ~/.venv
+source ~/.venv/bin/activate
+pip install vllm
+python -m vllm.entrypoints.openai.api_server
+```
+
+#### Llama.cpp (Lightweight)
+
+Minimal resource footprint, great for older machines:
+
+```bash
+brew install llama.cpp
+llama-cli -m <path-to-model.gguf> -i
+```
+
+### Adding a New Local LLM Provider
+
+1. Add a new case to `AgentProvider` enum in `LilAgents/AgentSession.swift`:
    ```swift
    case localMyLLM
    ```
 
-2. Update the properties (displayName, binaryName, etc.)
+2. Update provider properties:
+   ```swift
+   var displayName: String {
+       switch self {
+       case .localMyLLM: return "Local • MyLLM"
+       // ...
+       }
+   }
 
-3. Add configuration logic in `LocalLLMConfig`
+   var binaryName: String {
+       switch self {
+       case .localMyLLM: return "myllm"
+       // ...
+       }
+   }
+   ```
 
-4. Create or update the session handler in `LocalLLMSession.swift`
+3. Add installation instructions:
+   ```swift
+   var installInstructions: String {
+       switch self {
+       case .localMyLLM:
+           return "Installation instructions for MyLLM..."
+       // ...
+       }
+   }
+   ```
 
-5. Test detection with `AgentProvider.detectAvailableProviders()`
+4. Update factory method:
+   ```swift
+   func createSession() -> any AgentSession {
+       switch self {
+       case .localMyLLM: return LocalLLMSession(provider: .localMyLLM)
+       // ...
+       }
+   }
+   ```
+
+5. Add binary search paths in `detectAvailableProviders()` if needed
+
+6. Test with your LLM installed locally
+
+## Code Style
+
+- Follow Swift naming conventions (camelCase for variables/functions, PascalCase for types)
+- Use `private` for internal properties
+- Add `// MARK: -` comments to organize code sections
+- Document public functions with comments
+- Use descriptive variable names
+- Prefer `guard let` for optional unwrapping
+
+## Testing
+
+1. Install a local LLM (Ollama recommended)
+2. Build the app in Xcode: `open lil-agents.xcodeproj`
+3. Run and select the LLM from Provider menu
+4. Test interactive chat
 
 ## Building
 
@@ -49,23 +113,15 @@ This project now supports multiple local LLM backends:
 open lil-agents.xcodeproj
 ```
 
-Build with Xcode or `xcodebuild`.
-
-## Testing
-
-1. Install a local LLM (Ollama recommended for testing)
-2. Run the app and select it from the Provider menu
-3. Test interactive chat
-
-## Code Style
-
-- Follow Swift naming conventions
-- Use descriptive variable names
-- Add comments for complex logic
+Build with Xcode or via command line:
+```bash
+xcodebuild -scheme LilAgents -configuration Release
+```
 
 ## Submitting Changes
 
 1. Fork the repo
 2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit your changes
-4. Push and open a PR
+3. Commit with clear messages
+4. Push and open a PR to `ryanstephen/lil-agents`
+5. Reference any related issues

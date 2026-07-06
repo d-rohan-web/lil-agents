@@ -66,12 +66,14 @@ enum AgentProvider: String, CaseIterable {
     static func detectAvailableProviders(completion: @escaping () -> Void) {
         let all = AgentProvider.allCases
         let group = DispatchGroup()
+
         for provider in all {
             // OpenClaw is network-based, not a local binary
             if provider == .openclaw {
                 availability[provider] = OpenClawConfig.load().authToken.isEmpty == false
                 continue
             }
+
             group.enter()
             let home = FileManager.default.homeDirectoryForCurrentUser.path
             var fallbackPaths = [
@@ -81,13 +83,15 @@ enum AgentProvider: String, CaseIterable {
             ]
 
             // Add extra paths for local LLMs
-            if provider == .localOllama {
+            switch provider {
+            case .localOllama:
                 fallbackPaths.append("/opt/ollama/bin/ollama")
                 fallbackPaths.append("\(home)/.ollama/bin/ollama")
-            }
-            if provider == .localVllm {
+            case .localVllm:
                 fallbackPaths.append("\(home)/.venv/bin/vllm")
                 fallbackPaths.append("/usr/local/bin/vllm")
+            default:
+                break
             }
 
             ShellEnvironment.findBinary(name: provider.binaryName, fallbackPaths: fallbackPaths) { path in
@@ -95,6 +99,7 @@ enum AgentProvider: String, CaseIterable {
                 group.leave()
             }
         }
+
         group.notify(queue: .main) {
             completion()
         }
@@ -150,6 +155,7 @@ enum AgentProvider: String, CaseIterable {
 
 // MARK: - Local LLM Configuration
 
+/// Stores and manages per-provider configuration for local LLMs.
 struct LocalLLMConfig {
     let provider: AgentProvider
     var endpoint: String
@@ -160,6 +166,7 @@ struct LocalLLMConfig {
 
     private static let defaults = UserDefaults.standard
 
+    /// Load configuration from UserDefaults, with sensible defaults.
     static func load(for provider: AgentProvider) -> LocalLLMConfig {
         let prefix = provider.rawValue
         return LocalLLMConfig(
@@ -172,13 +179,14 @@ struct LocalLLMConfig {
         )
     }
 
+    /// Persist configuration to UserDefaults.
     mutating func save() {
         let prefix = provider.rawValue
         let defaults = UserDefaults.standard
         defaults.set(endpoint, forKey: "\(prefix)_endpoint")
         defaults.set(modelName, forKey: "\(prefix)_model")
         defaults.set(apiKey, forKey: "\(prefix)_apikey")
-        defaults.set(temperature, forKey: "\(prefix)_temperature")
+        defaults.set(Double(temperature), forKey: "\(prefix)_temperature")
         defaults.set(maxTokens, forKey: "\(prefix)_maxTokens")
     }
 
